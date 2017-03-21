@@ -1,0 +1,75 @@
+//移动单位
+//moveid是要移动的单位的ID，aimpos指的是目的地坐标
+void Unit_Move(int moveid, Position aimpos)
+{
+	Unit *moveunit = NULL;
+	static int isfirst = 1;
+	//这里的地图数组储存所有建筑物id,在接口中是静态变量，以后可以单独直接写进一个函数
+	///使得map是一个全局变量，仅在第一回合开始之前调用一次
+	static int map[101][101];
+	if (isfirst)
+	{
+		memset(map, 0, 101 * 101);
+		for (int i = 0; i < 52; i++)
+			map[all_unit[i].position.x][all_unit[i].position.y] = all_unit[i].type_name;
+		isfirst = 0;
+	}
+	//首先确认移动单位
+	int ifboth = 0;
+	for (int i = 0; i < UnitSum; i++)
+	{
+		if (allunit[i].unit_id == moveid)
+		{
+			moveunit = &allunit[i];
+			ifboth++;
+		}
+	}
+	int xdel = aimpos.x - moveunit->position.x, ydel = aimpos.y - moveunit->position.y;
+
+	//如果距离很小则直接到达终点
+	if (abs(xdel) + abs(ydel) <= moveunit->max_speed_now)
+	{
+		Move(moveid, aimpos);
+		return;
+	}
+	int xdire = ((xdel > 0) ? 1 : -1), ydire = ((ydel > 0) ? 1 : -1);//方向
+	Position pos = moveunit->position;
+	bool isxdire = ((ydel == 0) ? 0 : 1);
+
+	if (isxdire)
+	{//x方向
+		if (xdel*xdire <= moveunit->max_speed_now)//如果x运动接近终点
+		{
+			pos.x = aimpos.x;
+			pos.y = (moveunit->max_speed_now + moveunit->position.y * ydire + moveunit->position.x * xdire - aimpos.x * xdire) / ydire;
+			if (!map[pos.x][pos.y])
+			{//如果目的地不是建筑
+				Move(moveid, pos);
+				return;
+			}
+			else
+			{//是建筑
+				if (pos.y != moveunit->position.y) pos.y -= ydire;
+				else pos.x -= xdire;
+				Move(moveid, pos);
+				return;
+			}
+		}
+		else
+		{//x方向运动未接近终点
+			pos.x += moveunit->max_speed_now*xdire;
+			pos.y = moveunit->position.y;
+			if (map[pos.x][pos.y]) pos.x -= xdire;
+			Move(moveid, pos);
+			return;
+		}
+	}
+	else
+	{//y方向运动
+		pos.x = aimpos.x;
+		pos.y += moveunit->max_speed_now*ydire;
+		if (map[pos.x][pos.y]) pos.y -= ydire;
+		Move(moveid, pos);
+		return;
+	}
+}
